@@ -1,7 +1,7 @@
 const http = require("http");
 const websocketServer = require("websocket").server;
 const httpServer = http.createServer();
-httpServer.listen(9090, () => console.log("Server listening..."));
+httpServer.listen(process.env.PORT || 9090, () => console.log("Server listening..."));
 
 const clients = {};
 const games = {};
