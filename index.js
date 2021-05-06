@@ -68,6 +68,16 @@ wsServer.on("request", request => {
                 "nickname": nickname
             });
 
+            if (!games[gameId].state)
+                games[gameId].state = {};
+            
+            let state = games[gameId].state;
+            state[clientId] = {
+                "errors": 0,
+                "currentQuestion": 0,
+                "nickname": nickname
+            }
+
             const payLoad = {
                 "method": "join",
                 "game": game
@@ -77,33 +87,33 @@ wsServer.on("request", request => {
             game.clients.forEach(c => {
                 clients[c.clientId].connection.send(JSON.stringify(payLoad));
             });
-
-            // a user plays [hit or error]
-            if (result.method === "play") {
-                const gameId = result.gameId;
-                const clientId = result.clientId;
-                const isError = result.isError;
-
-                let state = games[gameId].state;
-                if (!state) state = {};
-
-                if (!state[clientId]) {
-                    state[clientId] = {
-                        "errors": 0,
-                        "currentQuestion": 0,
-                        "timeCompleted": 0 // talvez tirar isso daqui, e o erros tb
-                    }
-                }
-                
-                if (isError) state[clientId]["errors"] += 1;
-                else state[clientId]["currentQuestion"] += 1;
-            }
         }
 
         if (result.method === "start") {
             // start the game
             games[result.gameId].status = "running";
+            
             updateGameState();
+        }
+
+        // a user plays [hit or error]
+        if (result.method === "play") {
+            const gameId = result.gameId;
+            const clientId = result.clientId;
+            const isError = result.isError;
+
+            let state = games[gameId].state;
+            
+            if (isError) state[clientId]["errors"] += 1;
+            else {
+                state[clientId]["currentQuestion"] += 1;
+            }
+        }
+
+        if (result.method === "finish") {
+            // finish the game
+            const gameId = result.gameId;
+            games[gameId].status = 'finished';
         }
     });
     
@@ -131,7 +141,8 @@ function updateGameState() {
             "gameId": game.id,
             "ownerId": game.ownerId,
             "status": game.status,
-            "players": game.clients
+            "players": game.clients,
+            "state": game.state
         }
 
         game.clients.forEach(c => {
